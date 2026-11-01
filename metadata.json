@@ -1,0 +1,8 @@
+{
+  "name": "GIKI for Women - Digital Exit & WhatsApp Consent",
+  "description": "GIKI for Women Exit Assistance and Warden Approval system with mandatory parent WhatsApp consent, HMAC-SHA256 digital gate pass generation, and gate security verification.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,1061 @@
+# MASTER DEVELOPMENT PROMPT: GIKI FOR WOMEN
+## Digital Exit Assistance, Parent WhatsApp Consent & Warden Approval
+
+### ROLE
+
+Act as a Principal Full-Stack Engineer, Software Architect, Backend Security Engineer, Database Architect, React Developer, WhatsApp Business API Integration Engineer, UI/UX Designer and QA Engineer.
+
+Build a complete, production-structured, responsive web application for the GIKI for Women university project.
+
+The primary module is:
+
+**Digital Exit Assistance & Warden Approval with Mandatory Parent Consent.**
+
+Generate a fully working application, not a theoretical explanation or disconnected code snippets.
+
+Every file must contain complete source code, imports, validation, error handling and styling.
+
+Do not use pseudocode, placeholders, omitted code or fake backend functionality.
+
+---
+
+# 1. CORE APPLICATION OBJECTIVE
+
+Build a web-based platform that digitizes the exit-permission workflow for women students at GIKI.
+
+The platform must involve three parties:
+
+1. Student.
+2. Parent/Guardian.
+3. Hostel Warden.
+
+The student cannot receive a digital gate pass simply because the warden approves the request.
+
+**Both parent/guardian consent and warden approval are mandatory.**
+
+The workflow is:
+
+Student submits request → Warden initiates WhatsApp parent confirmation → Parent responds YES → System records parental consent → Warden gives final approval → Backend generates signed QR gate pass.
+
+If the parent responds NO, the request cannot be approved.
+
+If the warden rejects the request, the request is rejected regardless of parental consent.
+
+No QR code or signed pass may be generated before both approvals are complete.
+
+This is a university semester-project prototype using mock data. Display:
+
+"Academic Prototype — This system does not provide official GIKI authorization."
+
+---
+
+# 2. TECHNOLOGY STACK
+
+### Backend
+- Python 3.11+
+- FastAPI
+- SQLAlchemy ORM
+- SQLite (`app.db`)
+- Pydantic v2
+- Passlib with bcrypt
+- Python-Jose JWT
+- HS256
+- Python-Multipart
+- Uvicorn
+- Python HMAC and hashlib
+- httpx for WhatsApp API integration
+- pytest for backend testing
+
+### Frontend
+- React 18+
+- Vite
+- Tailwind CSS
+- React Router v6
+- Axios
+- Lucide React
+- qrcode.react
+
+### Messaging
+- WhatsApp Business Cloud API.
+- Meta webhook integration.
+- Verified inbound webhook signatures.
+- WhatsApp message templates where required.
+- YES/NO response handling.
+- Development simulation mode when actual WhatsApp credentials are unavailable.
+
+Frontend URL: `http://localhost:5173`
+
+Backend URL: `http://localhost:8000`
+
+Backend API prefix: `/api`
+
+---
+
+# 3. STUDENT REGISTRATION AND LOGIN
+
+## Institutional email requirement
+
+All student accounts must use the institutional email format:
+
+`u202xxxx@giki.edu.pk`
+
+For the supplied student registration number:
+
+`2024626`
+
+The email will be:
+
+`u2024626@giki.edu.pk`
+
+Implement server-side email validation.
+
+Use an appropriate regular expression for the required `u202` plus four-digit registration suffix format.
+
+Reject:
+- Gmail addresses for student accounts.
+- Personal email addresses.
+- Incorrect institutional domains.
+- Invalid registration-number formats.
+
+The registration number must match the numeric portion of the institutional email.
+
+## Mandatory student information
+
+During student registration or account provisioning, collect:
+
+- Full name.
+- GIKI institutional email.
+- Registration number.
+- Student contact number.
+- Parent/guardian full name.
+- Parent/guardian WhatsApp contact number.
+- Hostel.
+- Room number.
+- Password.
+
+Both contact numbers are mandatory.
+
+Validate phone numbers using international E.164 formatting.
+
+Store phone numbers consistently, including country code.
+
+For example, a Pakistan number should use the `+92` country code.
+
+Do not expose complete parent contact numbers unnecessarily in the student dashboard or ordinary warden list.
+
+## Authentication
+
+Students authenticate using their GIKI institutional email and password.
+
+Wardens authenticate using their assigned warden credentials.
+
+Use hashed passwords and JWT authentication.
+
+---
+
+# 4. USER ROLES
+
+Implement the following roles:
+
+### STUDENT
+
+Students can:
+- Log in.
+- View their profile.
+- Submit exit requests.
+- View their own requests.
+- View parent-consent status.
+- View warden-decision status.
+- View WhatsApp notification status.
+- Track request history.
+- View approved QR passes.
+- View rejection remarks.
+
+Students cannot:
+- Approve their own requests.
+- Change parent-consent status.
+- Change warden decisions.
+- Generate QR tokens.
+- Access another student's requests.
+
+### WARDEN
+
+Wardens can:
+- View all student exit requests.
+- View student and registered guardian information.
+- Review request details.
+- Initiate parent WhatsApp confirmation.
+- Retry eligible failed message deliveries.
+- View parent response status.
+- View parent response timestamp.
+- Approve requests after parent consent.
+- Reject requests.
+- Provide mandatory remarks.
+- View approval history.
+
+Wardens cannot:
+- Falsely mark a parent response as YES.
+- Override an actual NO response.
+- Generate QR codes manually.
+- Approve a request without parental consent.
+
+### PARENT/GUARDIAN
+
+Parents do not need a separate application account for the initial module.
+
+They participate through WhatsApp.
+
+They can:
+- Receive an exit-request confirmation message.
+- Review the student and exit-request information.
+- Respond YES to grant consent.
+- Respond NO to deny consent.
+
+Parent approval must be recorded through a verified WhatsApp webhook or a clearly identified development simulation.
+
+A parent must not be able to approve a request belonging to another student by guessing a pass ID.
+
+---
+
+# 5. DATABASE DESIGN
+
+Implement the following SQLAlchemy models.
+
+## User model
+
+Fields:
+
+- id
+- full_name
+- email
+- hashed_password
+- role
+- registration_number
+- student_phone
+- parent_name
+- parent_phone
+- hostel
+- room_number
+- is_active
+- created_at
+
+Use nullable fields appropriately for warden accounts.
+
+## GatePass model
+
+Fields:
+
+- id
+- student_id
+- reason
+- destination
+- departure_time
+- expected_return_time
+- status
+- parent_consent_status
+- parent_response_at
+- parent_response_message_id
+- parent_message_status
+- parent_message_sent_at
+- parent_message_error
+- warden_id
+- warden_remarks
+- warden_decision_at
+- signed_token
+- approved_at
+- actual_exit_time
+- actual_return_time
+- created_at
+- updated_at
+
+## Request status
+
+Implement:
+
+- PENDING
+- APPROVED
+- REJECTED
+
+## Parent consent status
+
+Implement:
+
+- NOT_REQUESTED
+- MESSAGE_PENDING
+- AWAITING_RESPONSE
+- YES
+- NO
+- DELIVERY_FAILED
+
+## WhatsApp message delivery status
+
+Implement:
+
+- NOT_SENT
+- QUEUED
+- SENT
+- DELIVERED
+- READ
+- FAILED
+
+Keep message delivery status separate from parent consent status.
+
+A message being delivered does not mean that the parent has approved the request.
+
+A parent replying YES must not automatically mean that the warden has approved the request.
+
+## Database constraints
+
+- Each student must have a valid institutional email.
+- Student and parent phone numbers must be mandatory.
+- Only authenticated students can create their own requests.
+- Each request belongs to exactly one student.
+- Parent response must be associated with the correct request and registered guardian.
+- Warden decision must be recorded.
+- QR token must remain null until final approval.
+
+---
+
+# 6. COMPLETE APPROVAL WORKFLOW
+
+This is the most important application feature.
+
+Implement the following exact workflow.
+
+## STEP 1: Student submits request
+
+The student logs in and submits:
+
+- Reason.
+- Destination.
+- Departure date and time.
+- Expected return date and time.
+
+The backend validates:
+
+- Departure is in the future.
+- Return is later than departure.
+- Student account has a registered phone number.
+- Parent/guardian name is present.
+- Parent/guardian WhatsApp number is present.
+
+Create a request with:
+
+`status = PENDING`
+
+`parent_consent_status = NOT_REQUESTED`
+
+`signed_token = NULL`
+
+## STEP 2: Warden views new request
+
+The request appears in the warden dashboard.
+
+Display:
+
+- Student name.
+- Registration number.
+- Hostel and room.
+- Student contact number.
+- Parent/guardian name.
+- Masked parent WhatsApp number.
+- Reason.
+- Destination.
+- Departure time.
+- Expected return time.
+- Request submission time.
+
+Provide a button:
+
+**REQUEST PARENT APPROVAL**
+
+The warden must initiate the parent confirmation.
+
+## STEP 3: Warden initiates WhatsApp message
+
+When the warden clicks the button:
+
+1. Backend verifies warden authorization.
+2. Backend checks that the request is PENDING.
+3. Backend verifies that parent contact information exists.
+4. Backend generates a secure, unique confirmation reference.
+5. Backend creates an outbound WhatsApp message.
+6. Backend records message status.
+7. The parent receives the request on WhatsApp.
+
+Use the WhatsApp Business Cloud API.
+
+Use approved WhatsApp message templates where required by Meta's messaging policies.
+
+Do not place sensitive student information in publicly accessible URLs.
+
+Use a secure, expiring, unique request reference.
+
+Do not allow arbitrary public approval through an insecure GET link.
+
+## STEP 4: WhatsApp parent message
+
+Generate a professional WhatsApp message.
+
+Example:
+
+"GIKI FOR WOMEN — PARENT CONSENT REQUEST
+
+Dear [Parent Name],
+
+Your daughter [Student Name], Registration No. [Registration Number], has requested permission to leave campus.
+
+Exit Details:
+
+Destination: [Destination]
+Reason: [Reason]
+Departure: [Departure Date and Time]
+Expected Return: [Expected Return Date and Time]
+
+Please confirm whether you grant permission for this exit request.
+
+Reply:
+
+YES — I grant permission.
+
+NO — I do not grant permission.
+
+Your response will be securely recorded and forwarded to the hostel warden for the final decision.
+
+This is an academic prototype and not official GIKI authorization."
+
+Use the official WhatsApp integration rather than claiming that a message was sent when no API call occurred.
+
+## STEP 5: Parent responds YES or NO
+
+Implement a Meta WhatsApp webhook.
+
+When a parent responds:
+
+### If parent replies YES
+
+- Validate webhook authenticity.
+- Identify the incoming WhatsApp sender.
+- Match the sender against the registered parent phone number.
+- Match the response to the correct pending confirmation.
+- Verify that the request is still eligible.
+- Store parent consent as YES.
+- Store response timestamp.
+- Store WhatsApp message ID.
+- Update the warden dashboard.
+- Notify the warden that parent consent has been received.
+
+### If parent replies NO
+
+- Validate webhook authenticity.
+- Match the sender and request.
+- Store parent consent as NO.
+- Store response timestamp.
+- Notify the warden.
+- Mark the request as ineligible for approval.
+- Do not generate a QR code.
+
+### Other responses
+
+If the parent sends something other than YES or NO:
+
+- Do not approve or reject the request.
+- Send instructions explaining how to respond.
+- Keep the request awaiting a response.
+
+### Duplicate responses
+
+Handle duplicate webhook deliveries idempotently.
+
+Do not create duplicate approvals.
+
+A response must not modify an already finalized decision.
+
+A late YES must not reverse a rejection.
+
+## STEP 6: Warden final decision
+
+After parent consent is YES, the warden sees:
+
+<parent_consent_status>YES</parent_consent_status>
+
+Display:
+
+**Parent has granted permission. Final warden decision required.**
+
+The warden can:
+
+- APPROVE
+- REJECT
+
+Remarks are mandatory.
+
+If the parent response is NO:
+
+Disable the approval button.
+
+Display:
+
+"Parent/Guardian denied permission. This request cannot be approved."
+
+If no parent response has arrived:
+
+Display:
+
+"Awaiting parent/guardian confirmation."
+
+The warden may reject the request at any time.
+
+## STEP 7: Automatic final approval and QR generation
+
+Only after:
+
+`parent_consent_status = YES`
+
+AND
+
+`warden decision = APPROVED`
+
+The backend must:
+
+1. Verify both approval conditions.
+2. Store the final decision.
+3. Record the warden ID.
+4. Record approval timestamp.
+5. Generate the HMAC-SHA256 signed token.
+6. Save the token in the database.
+7. Return the approved pass to the student.
+
+Token format:
+
+`GW-PASS-{pass_id}-{HMAC}`
+
+The frontend renders the exact token as an SVG QR code.
+
+Do not generate a QR code before both approvals.
+
+---
+
+# 7. WHATSAPP INTEGRATION ARCHITECTURE
+
+Create a separate backend messaging service.
+
+Suggested additional files:
+
+- `backend/app/services/__init__.py`
+- `backend/app/services/whatsapp_service.py`
+- `backend/app/routes/whatsapp_webhook.py`
+
+Implement:
+
+### Outbound message
+
+- Send WhatsApp message through Meta Cloud API.
+- Use environment variables for access token, phone number ID and API version.
+- Handle HTTP failures and timeouts.
+- Store returned message ID.
+- Update delivery status.
+- Handle failed delivery.
+- Avoid exposing API credentials to the frontend.
+
+### Inbound webhook
+
+Implement:
+
+- GET webhook verification endpoint using Meta's verification token.
+- POST inbound message endpoint.
+- Validate `X-Hub-Signature-256` against the raw request body using the Meta app secret.
+- Validate the sender phone number.
+- Parse YES/NO responses.
+- Match the request to a secure confirmation reference.
+- Prevent duplicate webhook processing.
+- Record response timestamps.
+
+### WhatsApp configuration
+
+Read these variables from `.env`:
+
+- `WHATSAPP_ACCESS_TOKEN`
+- `WHATSAPP_PHONE_NUMBER_ID`
+- `WHATSAPP_APP_SECRET`
+- `WHATSAPP_VERIFY_TOKEN`
+- `WHATSAPP_API_VERSION`
+- `WHATSAPP_TEMPLATE_NAME`
+
+Never commit actual credentials.
+
+### Development simulation mode
+
+When real WhatsApp credentials are unavailable:
+
+- Allow an explicit development simulation mode.
+- Display a clear DEVELOPMENT MODE banner.
+- Generate the outbound message preview.
+- Allow an authorized developer/test interface to simulate YES or NO.
+- Record that the response was simulated.
+- Never represent simulated responses as real WhatsApp messages.
+- Disable simulation endpoints in production.
+
+Actual WhatsApp delivery and response handling must be tested separately when Meta credentials and webhook access are available.
+
+---
+
+# 8. BACKEND API ENDPOINTS
+
+Implement complete FastAPI endpoints.
+
+### Authentication
+
+POST `/api/auth/register`
+
+POST `/api/auth/login`
+
+GET `/api/auth/me`
+
+POST `/api/auth/seed`
+
+### Student
+
+POST `/api/student/passes`
+
+GET `/api/student/passes`
+
+GET `/api/student/passes/{pass_id}`
+
+### Warden
+
+GET `/api/warden/passes`
+
+GET `/api/warden/passes/{pass_id}`
+
+POST `/api/warden/passes/{pass_id}/request-parent-consent`
+
+PATCH `/api/warden/passes/{pass_id}/decision`
+
+POST `/api/warden/passes/{pass_id}/resend-parent-consent`
+
+### WhatsApp
+
+GET `/api/webhooks/whatsapp`
+
+POST `/api/webhooks/whatsapp`
+
+### Gate verification
+
+POST `/api/gate/verify`
+
+POST `/api/gate/exit`
+
+POST `/api/gate/return`
+
+### API authorization rules
+
+- Student endpoints require STUDENT.
+- Warden endpoints require WARDEN.
+- Gate endpoints require authorized gate-security access.
+- WhatsApp webhook endpoints must validate Meta's webhook authentication.
+- Development simulation endpoints must be disabled in production.
+
+Use proper HTTP status codes and consistent response schemas.
+
+---
+
+# 9. QR PASS SECURITY
+
+Implement HMAC-SHA256.
+
+The token must contain:
+
+- Pass ID.
+- Server-generated HMAC signature.
+
+The signature must incorporate immutable pass details and expiry information.
+
+Verification must:
+
+- Retrieve the pass from the database.
+- Reconstruct the expected signature.
+- Use `hmac.compare_digest`.
+- Confirm parent consent is YES.
+- Confirm warden decision is APPROVED.
+- Confirm the pass is not expired.
+- Confirm the pass has not already been used.
+- Reject altered tokens.
+- Reject revoked or rejected passes.
+
+Only the backend can generate signatures.
+
+The frontend only displays the QR code.
+
+---
+
+# 10. FRONTEND DIRECTORY
+
+Retain the original React directory structure and add the following components.
+
+`frontend/src/components/student/ParentConsentStatus.jsx`
+
+Display:
+
+- Parent consent status.
+- WhatsApp message status.
+- Parent response timestamp.
+- Warden approval status.
+
+`frontend/src/components/warden/ParentApprovalPanel.jsx`
+
+Display:
+
+- Parent name.
+- Masked parent number.
+- Request parent approval button.
+- WhatsApp delivery status.
+- Parent YES/NO status.
+- Response timestamp.
+- Retry message action when permitted.
+
+`frontend/src/pages/RegistrationPage.jsx`
+
+Provide the complete student registration form with mandatory student and parent contact information.
+
+`frontend/src/services/whatsapp.js`
+
+Provide frontend API functions for warden WhatsApp actions.
+
+Do not place WhatsApp API credentials in frontend code.
+
+Retain all previously specified files:
+
+- Navbar.jsx
+- ProtectedRoute.jsx
+- ExitPassForm.jsx
+- ActivePassQR.jsx
+- ApprovalQueue.jsx
+- DecisionModal.jsx
+- AuthContext.jsx
+- LoginPage.jsx
+- StudentDashboard.jsx
+- WardenDashboard.jsx
+- App.jsx
+- main.jsx
+- index.css
+- api.js
+- package.json
+- vite.config.js
+- tailwind.config.js
+
+All components must communicate with actual backend APIs.
+
+Do not use hardcoded approval data.
+
+---
+
+# 11. STUDENT DASHBOARD
+
+Include:
+
+- Student profile.
+- Registration number.
+- Student contact number.
+- Parent/guardian name.
+- Masked parent contact number.
+- Exit request form.
+- Request history.
+- Parent consent status.
+- WhatsApp message status.
+- Warden decision status.
+- Approved digital QR pass.
+
+Show a clear approval progress tracker:
+
+1. Request submitted.
+2. Parent confirmation requested.
+3. Parent consent received.
+4. Warden final approval.
+5. Digital gate pass generated.
+
+Use clear colors:
+
+- Amber: awaiting action.
+- Green: approved.
+- Red: rejected.
+- Gray: not started.
+
+---
+
+# 12. WARDEN DASHBOARD
+
+Include:
+
+### Summary cards
+
+- Total requests.
+- Awaiting parent response.
+- Parent approved.
+- Parent rejected.
+- Awaiting warden decision.
+- Final approved.
+- Final rejected.
+
+### Request table
+
+Display:
+
+- Student name.
+- Registration number.
+- Hostel.
+- Room.
+- Student phone.
+- Parent name.
+- Masked parent number.
+- Destination.
+- Reason.
+- Departure.
+- Expected return.
+- Parent status.
+- WhatsApp status.
+- Warden status.
+
+### Warden actions
+
+- View request.
+- Request parent consent.
+- Retry failed WhatsApp message.
+- Review parent response.
+- Approve after YES.
+- Reject with mandatory remarks.
+- View signed pass information.
+
+Never allow approval before parental YES.
+
+---
+
+# 13. LOGIN AND DEMONSTRATION ACCOUNTS
+
+Create an idempotent development seed mechanism.
+
+Student demonstration account:
+
+- Name: Syeda Khadija Hassan
+- Email: `u2024626@giki.edu.pk`
+- Registration: `2024626`
+- Password: `student123`
+- Student contact: configurable demonstration number.
+- Parent name: configurable demonstration name.
+- Parent WhatsApp: configurable demonstration number.
+- Hostel: Hostel 8
+- Room: 204
+- Role: STUDENT
+
+Warden demonstration account:
+
+- Email: `warden@giki.edu.pk`
+- Password: `warden123`
+- Name: Hostel 8 Chief Warden
+- Role: WARDEN
+
+Use clearly marked mock contact numbers until actual consent and testing numbers are supplied.
+
+Do not send WhatsApp messages to arbitrary numbers during seed operations.
+
+---
+
+# 14. TESTING REQUIREMENTS
+
+Use pytest and FastAPI TestClient.
+
+Test the following scenarios.
+
+### Student registration
+
+- Valid institutional email accepted.
+- Invalid email rejected.
+- Registration number mismatch rejected.
+- Missing student phone rejected.
+- Missing parent phone rejected.
+- Invalid international phone rejected.
+- Duplicate account rejected.
+
+### Student request
+
+- Valid request created.
+- Departure in the past rejected.
+- Return before departure rejected.
+- Request belongs to authenticated student.
+- No QR generated at submission.
+
+### Parent WhatsApp consent
+
+- Warden can initiate message.
+- Student cannot initiate the warden action.
+- Message preview works in simulation mode.
+- Successful API delivery updates message status.
+- Failed API delivery is recorded.
+- Valid YES response records consent.
+- Valid NO response records denial.
+- Unknown response does not change consent.
+- Invalid webhook signature rejected.
+- Wrong sender phone rejected.
+- Expired confirmation rejected.
+- Duplicate webhook event does not duplicate approval.
+
+### Warden approval
+
+- Approval before parent YES rejected.
+- Approval after parent NO rejected.
+- Approval after parent YES succeeds.
+- Mandatory remarks enforced.
+- Rejection works regardless of parent response.
+- Duplicate decisions rejected.
+- QR generated only after final approval.
+
+### QR verification
+
+- Valid token accepted.
+- Altered token rejected.
+- Invalid signature rejected.
+- Expired token rejected.
+- Rejected request cannot be verified.
+- Pending request cannot be verified.
+- Already-used token rejected.
+
+### Frontend
+
+- Registration page works.
+- Institutional email validation works.
+- Login works.
+- Role-based redirects work.
+- Student request submission works.
+- Warden WhatsApp action works.
+- Parent response status updates.
+- Warden decision modal works.
+- QR renders as SVG.
+- Mobile layout works.
+- API errors display correctly.
+
+Run:
+
+`pytest -q`
+
+Run:
+
+`npm run build`
+
+Fix all actual errors.
+
+Never claim that live WhatsApp delivery was tested unless it was actually tested using configured Meta credentials and a reachable webhook.
+
+---
+
+# 15. ENVIRONMENT CONFIGURATION
+
+Provide a complete `.env.example` containing:
+
+- DATABASE_URL
+- JWT_SECRET
+- JWT_ALGORITHM
+- ACCESS_TOKEN_EXPIRE_MINUTES
+- HMAC_SECRET
+- APP_ENV
+- CORS_ORIGINS
+- WHATSAPP_ACCESS_TOKEN
+- WHATSAPP_PHONE_NUMBER_ID
+- WHATSAPP_APP_SECRET
+- WHATSAPP_VERIFY_TOKEN
+- WHATSAPP_API_VERSION
+- WHATSAPP_TEMPLATE_NAME
+- WHATSAPP_SIMULATION_MODE
+
+Do not include real secrets.
+
+Explain how to configure Meta WhatsApp Business Cloud API and its webhook.
+
+The application must still start without live WhatsApp credentials when explicit development simulation mode is enabled.
+
+---
+
+# 16. OUTPUT AND IMPLEMENTATION RULES
+
+Generate the complete application in this order:
+
+1. Directory structure.
+2. Dependencies and configurations.
+3. Database models.
+4. Pydantic schemas.
+5. Security and authentication.
+6. WhatsApp service.
+7. WhatsApp webhook.
+8. Student routes.
+9. Warden routes.
+10. Gate verification.
+11. Main backend application.
+12. React services.
+13. Authentication context.
+14. Registration and login pages.
+15. Student components and dashboard.
+16. Warden components and dashboard.
+17. Application routing.
+18. Styling.
+19. Tests.
+20. Installation and execution instructions.
+
+Strict requirements:
+
+- Every file must be complete.
+- No pseudocode.
+- No omitted imports.
+- No fake WhatsApp delivery.
+- No hardcoded production secrets.
+- No frontend-generated signatures.
+- No QR before both approvals.
+- No approval without parental YES.
+- No student access to warden functionality.
+- No insecure public parent approval links.
+- No duplicate webhook processing.
+- No missing error handling.
+- No fabricated test results.
+
+If output limits are reached, stop at a complete file boundary and continue with the next file.
+
+Maintain a checklist of generated files.
+
+---
+
+# 17. FINAL ACCEPTANCE SCENARIO
+
+The implementation is accepted only when this complete workflow works:
+
+1. Student registers with institutional GIKI email.
+2. Student provides mandatory contact information.
+3. Student registers a parent/guardian WhatsApp number.
+4. Student logs in.
+5. Student submits an exit request.
+6. Request appears in warden dashboard.
+7. Warden clicks REQUEST PARENT APPROVAL.
+8. WhatsApp message is sent through the configured service or explicitly simulated in development.
+9. Parent responds YES.
+10. Backend verifies the webhook and records parental consent.
+11. Warden dashboard updates to show parent approval.
+12. Warden reviews the request.
+13. Warden approves with mandatory remarks.
+14. Backend verifies both approvals.
+15. Backend generates the signed HMAC-SHA256 token.
+16. Student dashboard displays the approved digital gate pass.
+17. QR code renders correctly as SVG.
+18. Authorized gate-security interface verifies the pass.
+19. Exit and return activities are recorded.
+
+Also demonstrate:
+
+- Parent NO.
+- No parent response.
+- WhatsApp delivery failure.
+- Warden rejection.
+- Approval attempted before parental consent.
+- Duplicate webhook events.
+- Invalid sender.
+- Invalid signature.
+- Expired pass.
+- Already-used pass.
+
+**Build this as an actual, responsive, secure, end-to-end web application. Prioritize correctness, complete implementation, realistic WhatsApp integration, and verified functionality.**
